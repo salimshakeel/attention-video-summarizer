@@ -3,4 +3,4 @@ numpy
 panda
 torchvision
 moviepy
-opencv
+opencv2
