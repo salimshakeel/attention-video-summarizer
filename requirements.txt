@@ -3,5 +3,3 @@ numpy
 panda
 torchvision
 moviepy
-cv2
-
