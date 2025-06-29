@@ -1,55 +1,28 @@
 import streamlit as st
-import os
-import sys
-from model.model_loader import summarize_video
-from datetime import datetime
-import shutil
+import requests
 
-# === Directories ===
-UPLOAD_FOLDER = "static/uploads"
-OUTPUT_FOLDER = "static/outputs"
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-os.makedirs(OUTPUT_FOLDER, exist_ok=True)
+st.title("🎬 Video Summarization App")
 
-# === Streamlit App ===
-st.set_page_config(page_title="Video Summarizer", layout="centered")
-st.title("🎬 AI Video Summarizer (PGL-SUM Based)")
+uploaded_file = st.file_uploader("Upload a video", type=["mp4", "mov", "avi"])
+if uploaded_file is not None:
+    with st.spinner("Uploading and summarizing..."):
+        files = {"file": (uploaded_file.name, uploaded_file, "video/mp4")}
+        res = requests.post("http://localhost:5000/upload", files=files)
 
-st.markdown("""
-Upload a video, and our model will generate a summarized version automatically using deep learning.
-""")
+    if res.status_code == 200:
+        data = res.json()
+        st.success("✅ Summary generated successfully!")
 
-# === File Upload ===
-uploaded_video = st.file_uploader("Upload a video file", type=["mp4", "mov", "avi", "mkv"])
+        # Display original video
+        st.subheader("📤 Uploaded Video")
+        st.video(data["video_path"])
 
-if uploaded_video is not None:
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    video_filename = f"video_{timestamp}.mp4"
-    video_path = os.path.join(UPLOAD_FOLDER, video_filename)
+        # Display summary video
+        st.subheader("🎞️ Summary Video")
+        st.video(data["summary_path"])
 
-    # Save uploaded video
-    with open(video_path, "wb") as f:
-        f.write(uploaded_video.read())
-    st.success("✅ Video uploaded successfully!")
-    st.video(video_path)
-
-    # Start summarization
-    if st.button("📽️ Generate Summary"):
-        with st.spinner("Summarizing video... This may take a moment."):
-            summary_path = os.path.join(OUTPUT_FOLDER, f"summary_{timestamp}.mp4")
-            try:
-                summarize_video(video_path, summary_path)
-                st.success("✅ Summary video generated!")
-                st.video(summary_path)
-
-                # Download option
-                with open(summary_path, "rb") as video_file:
-                    st.download_button(
-                        label="📥 Download Summary",
-                        data=video_file,
-                        file_name=f"summary_{timestamp}.mp4",
-                        mime="video/mp4"
-                    )
-
-            except Exception as e:
-                st.error(f"❌ Error: {str(e)}")
+        # Download button
+        with open(data["summary_path"], 'rb') as f:
+            st.download_button("⬇ Download Summary", f, file_name="summary_video.mp4")
+    else:
+        st.error("❌ Upload or summarization failed.")
